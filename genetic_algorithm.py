@@ -101,6 +101,25 @@ def position_based_crossover(p1, p2, num_machines):
                 p2_pointer += 1
     return child
 
+def precedence_operation_crossover(p1, p2, num_jobs):
+    size = len(p1)
+    child = [None] * size
+    # Selects a subset of jobs with the same id from the parent 1 in their order
+    selected_jobs = random.sample(range(num_jobs), random.randint(1, num_jobs // 2))
+    for i in range(size):
+        if p1[i] in selected_jobs:
+            child[i] = p1[i]
+    
+    # Fill the remaining empty spots with the operations of other jobs from the other parent
+    p2_pointer = 0
+    for i in range(size):
+        if child[i] is None:
+            while p2[p2_pointer] in selected_jobs:
+                p2_pointer += 1
+            child[i] = p2[p2_pointer]
+            p2_pointer += 1
+    return child
+
 def main():
     # load the data
     num_jobs, num_m, job_data = parse_input_data(FILE_PATH)
@@ -148,18 +167,22 @@ def main():
 
             # Crossover algorithms
             if random.random() < CROSSOVER_PROB:
-                child = position_based_crossover(p1, p2, num_m)
+                if random.random() < 0.5:
+                    child = position_based_crossover(p1, p2, num_m)
+                else:
+                    child = precedence_operation_crossover(p1, p2, num_jobs)
             else:
                 child = list(p1)
 
-            # child = list(p1)
-            # Mutation algorithms
-            # Change the position of two of the jobs of the item (apply the change to the probablity defined by MUTATION_PROB)
+            # Mutation algorithms (apply the change to the probablity defined by MUTATION_PROB)
             if random.random() < MUTATION_PROB:
-                idx1, idx2 = random.sample(range(len(child)), 2)
-                child[idx1], child[idx2] = child[idx2], child[idx1]
+                if random.random() < 0.5: # Change the position of two of the jobs of the item
+                    idx1, idx2 = random.sample(range(len(child)), 2)
+                    child[idx1], child[idx2] = child[idx2], child[idx1]
+                else: # Reverse a segment of the cromosome
+                    idx1, idx2 = sorted(random.sample(range(len(child)), 2))
+                    child[idx1:idx2] = reversed(child[idx1:idx2])
             new_pop.append(child)
-        # print('the scores are:', len(new_pop))
         population = new_pop
         if gen % 20 == 0:
             print(f"Generation {gen}: Best Total Time = {scores[0][0]}")
